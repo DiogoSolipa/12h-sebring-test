@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>12h Sebring — Strategy Board</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800;900&family=DM+Mono:wght@300;400;500&family=Barlow+Condensed:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#070809; --surface:#0d0f12; --border:#1c2028; --border2:#252b35;
+  --gold:#d4a843; --gold2:#f0c96a; --cyan:#3dd6d0; --green:#3ecf78;
+  --red:#e8524a; --orange:#e89a3c; --purple:#a06ae8;
+  --text:#dce2ec; --muted:#505870; --white:#f0f4ff;
+  --hot:#e8524a; --warm:#e89a3c; --cool:#3ecf78;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:'Barlow Condensed',sans-serif;min-height:100vh;
+  background-image:radial-gradient(ellipse 60% 40% at 80% 0%,rgba(212,168,67,.05) 0%,transparent 60%),
+  radial-gradient(ellipse 40% 60% at 0% 100%,rgba(61,214,208,.04) 0%,transparent 60%)}
+body::after{content:'';position:fixed;inset:0;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.022) 2px,rgba(0,0,0,.022) 4px);
+  pointer-events:none;z-index:999}
+.wrap{max-width:1240px;margin:0 auto;padding:28px 18px 60px}
+
+/* HEADER */
+.hdr{display:grid;grid-template-columns:1fr auto;align-items:end;gap:20px;margin-bottom:28px;padding-bottom:20px;border-bottom:1px solid var(--border);position:relative}
+.hdr::after{content:'';position:absolute;bottom:-1px;left:0;width:220px;height:1px;background:linear-gradient(90deg,var(--gold),transparent)}
+.tag{font-family:'DM Mono',monospace;font-size:10px;color:var(--cyan);letter-spacing:3px;margin-bottom:4px}
+h1{font-family:'Orbitron',sans-serif;font-size:clamp(28px,4.5vw,54px);font-weight:900;color:var(--white);letter-spacing:-1px;line-height:1}
+h1 em{color:var(--gold);font-style:normal}
+.sub{font-size:13px;color:var(--muted);letter-spacing:2px;margin-top:5px;font-weight:300}
+.car-badge{font-family:'Orbitron',sans-serif;font-size:16px;font-weight:800;color:var(--gold);letter-spacing:3px}
+.car-sub{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:2px}
+
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+/* PHASE CONFIG */
+.config-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px;animation:fadeIn .35s ease both}
+.config-card{background:var(--surface);border:1px solid var(--border);padding:16px 18px;position:relative;overflow:hidden}
+.config-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.config-card.hot::before{background:linear-gradient(90deg,var(--hot),#c84b3a)}
+.config-card.warm::before{background:linear-gradient(90deg,var(--warm),#b87820)}
+.config-card.cool::before{background:linear-gradient(90deg,var(--cool),#2a7a5a)}
+.config-title{font-family:'Orbitron',sans-serif;font-size:10px;letter-spacing:2px;margin-bottom:12px}
+.config-card.hot .config-title{color:#e8724a}
+.config-card.warm .config-title{color:#e8aa5c}
+.config-card.cool .config-title{color:#5ecf90}
+.config-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:7px}
+.cfg-group label{font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1px;display:block;margin-bottom:4px}
+.cfg-input{background:rgba(0,0,0,.4);border:1px solid var(--border2);color:var(--white);font-family:'DM Mono',monospace;
+  font-size:13px;width:100%;padding:6px 9px;outline:none;transition:border-color .2s;appearance:textfield;-moz-appearance:textfield}
+.cfg-input::-webkit-outer-spin-button,.cfg-input::-webkit-inner-spin-button{-webkit-appearance:none}
+.config-card.hot .cfg-input:focus{border-color:var(--hot)}
+.config-card.warm .cfg-input:focus{border-color:var(--warm)}
+.config-card.cool .cfg-input:focus{border-color:var(--cool)}
+.cfg-hint{font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);margin-top:8px;line-height:1.6}
+.cfg-hint strong{color:var(--text)}
+
+/* PIT ROW */
+.pit-row{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--cyan);
+  padding:14px 18px;margin-bottom:16px;animation:fadeIn .35s .05s ease both}
+.pit-inner{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:10px}
+.pit-title{font-family:'Orbitron',sans-serif;font-size:10px;letter-spacing:2px;color:var(--cyan)}
+
+/* SIM ROW */
+.sim-row{display:flex;gap:14px;align-items:center;margin-bottom:22px;animation:fadeIn .35s .1s ease both}
+.sim-btn{background:var(--gold);color:#050809;border:none;font-family:'Orbitron',sans-serif;
+  font-size:12px;font-weight:800;letter-spacing:2px;padding:13px 30px;cursor:pointer;transition:all .2s;white-space:nowrap}
+.sim-btn:hover{background:var(--gold2);transform:translateY(-1px);box-shadow:0 4px 20px rgba(212,168,67,.3)}
+.sim-note{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);line-height:1.65}
+
+/* KPI */
+.kpi-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:22px}
+.kpi{background:var(--surface);border:1px solid var(--border);padding:13px 12px;position:relative;overflow:hidden;animation:fadeIn .35s ease both}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.kpi.gold::before{background:var(--gold)} .kpi.cyan::before{background:var(--cyan)}
+.kpi.green::before{background:var(--green)} .kpi.orange::before{background:var(--orange)}
+.kpi.red::before{background:var(--red)} .kpi.purple::before{background:var(--purple)}
+.kpi-lbl{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:5px}
+.kpi-val{font-family:'Orbitron',sans-serif;font-size:22px;font-weight:800;line-height:1}
+.kpi.gold .kpi-val{color:var(--gold)} .kpi.cyan .kpi-val{color:var(--cyan)}
+.kpi.green .kpi-val{color:var(--green)} .kpi.orange .kpi-val{color:var(--orange)}
+.kpi.red .kpi-val{color:var(--red)} .kpi.purple .kpi-val{color:var(--purple)}
+.kpi-unit{font-size:10px;color:var(--muted);margin-top:3px;font-weight:300}
+
+/* CHART */
+.chart-wrap{background:var(--surface);border:1px solid var(--border);padding:18px 20px;margin-bottom:22px;animation:fadeIn .35s .15s ease both}
+.section-hdr{display:flex;align-items:baseline;gap:12px;margin-bottom:12px}
+.section-title{font-family:'Orbitron',sans-serif;font-size:12px;font-weight:700;letter-spacing:3px;color:var(--white)}
+.section-tag{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)}
+.chart-canvas-wrap{position:relative;height:200px;width:100%}
+
+/* PHASE LEGEND BAR */
+.phase-legend-row{display:flex;gap:16px;align-items:center;margin-bottom:14px;flex-wrap:wrap}
+.legend-item{display:flex;align-items:center;gap:6px;font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)}
+.legend-dot{width:10px;height:10px;border-radius:2px;flex-shrink:0}
+
+/* TABLE */
+.table-section{background:var(--surface);border:1px solid var(--border);overflow:hidden;animation:fadeIn .35s .2s ease both;margin-bottom:22px}
+.table-header-area{padding:14px 18px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.alert-banner{font-family:'DM Mono',monospace;font-size:10px;padding:4px 10px;letter-spacing:1px}
+.alert-ok{background:rgba(62,207,120,.1);color:var(--green);border:1px solid rgba(62,207,120,.2)}
+.alert-warn{background:rgba(232,154,60,.1);color:var(--orange);border:1px solid rgba(232,154,60,.2)}
+.alert-crit{background:rgba(232,82,74,.1);color:var(--red);border:1px solid rgba(232,82,74,.2)}
+.reset-all-btn{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1px;padding:4px 12px;
+  background:transparent;color:var(--purple);border:1px solid var(--purple);cursor:pointer;transition:all .2s}
+.reset-all-btn:hover{background:rgba(160,106,232,.1)}
+
+table{width:100%;border-collapse:collapse}
+thead tr{background:#0a0c0e}
+th{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--gold);
+  padding:10px 11px;text-align:left;font-weight:normal;text-transform:uppercase;white-space:nowrap}
+td{padding:7px 11px;font-family:'DM Mono',monospace;font-size:11px;border-bottom:1px solid rgba(28,32,40,.55);color:var(--text);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tbody tr:hover{background:rgba(212,168,67,.025)}
+tbody tr.last-stint{background:rgba(232,82,74,.045)}
+tbody tr.overridden{background:rgba(160,106,232,.035)}
+
+/* Phase stripe — left border on row via first cell */
+.phase-stripe{width:3px;padding:0!important;border-bottom:1px solid rgba(28,32,40,.55)}
+
+td.gold{color:var(--gold)} td.green{color:var(--green)} td.orange{color:var(--orange)}
+td.red{color:var(--red)} td.muted{color:var(--muted)} td.cyan{color:var(--cyan)} td.purple{color:var(--purple)}
+td.num{font-size:13px;color:var(--white);font-weight:500}
+
+/* FUEL INPUT cell */
+.fuel-input-wrap{display:flex;align-items:center;gap:5px}
+.fuel-ov-input{background:rgba(0,0,0,.35);border:1px solid var(--border2);color:var(--white);
+  font-family:'DM Mono',monospace;font-size:12px;width:52px;padding:3px 7px;outline:none;text-align:center;
+  transition:border-color .2s;appearance:textfield;-moz-appearance:textfield}
+.fuel-ov-input::-webkit-outer-spin-button,.fuel-ov-input::-webkit-inner-spin-button{-webkit-appearance:none}
+.fuel-ov-input.modified{border-color:var(--purple);color:var(--purple)}
+.fuel-ov-input:focus{border-color:var(--cyan)}
+.ov-reset-btn{background:transparent;border:none;color:var(--muted);cursor:pointer;
+  font-family:'DM Mono',monospace;font-size:11px;padding:2px 3px;transition:color .15s;line-height:1}
+.ov-reset-btn:hover{color:var(--red)}
+.ov-badge{font-size:8px;color:var(--purple);letter-spacing:1px}
+
+/* Fuel bar */
+.fuel-bar-cell{display:flex;align-items:center;gap:6px}
+.mini-bar-bg{width:52px;height:3px;background:var(--border2);flex-shrink:0}
+.mini-bar{height:100%}
+
+/* RESULTS BOTTOM */
+.results-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;animation:fadeIn .35s .25s ease both}
+.res-card{border:1px solid var(--border);padding:15px 16px;background:var(--surface);border-left:3px solid}
+.res-card.gold{border-left-color:var(--gold)} .res-card.cyan{border-left-color:var(--cyan)} .res-card.green{border-left-color:var(--green)}
+.res-title{font-family:'Orbitron',sans-serif;font-size:9px;letter-spacing:2px;margin-bottom:9px}
+.res-card.gold .res-title{color:var(--gold)} .res-card.cyan .res-title{color:var(--cyan)} .res-card.green .res-title{color:var(--green)}
+.res-body{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);line-height:1.85}
+.res-body strong{color:var(--text)}
+
+@media(max-width:900px){
+  .kpi-grid{grid-template-columns:repeat(3,1fr)}
+  .config-grid{grid-template-columns:1fr}
+  .pit-inner{grid-template-columns:repeat(2,1fr)}
+  .results-grid{grid-template-columns:1fr}
+  .hdr{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- HEADER -->
+<div class="hdr">
+  <div>
+    <div class="tag">// STRATEGY BOARD · LAP SIM + FUEL MGT · CADILLAC GTP</div>
+    <h1>12H <em>SEBRING</em></h1>
+    <div class="sub">SIMULAÇÃO DE VOLTAS · GESTÃO DE COMBUSTÍVEL · OVERRIDE POR STINT</div>
+  </div>
+  <div style="text-align:right">
+    <div class="car-badge">CADILLAC GTP</div>
+    <div class="car-sub" style="margin-top:4px">HYPERCAR · IRACING</div>
+  </div>
+</div>
+
+<!-- PHASE CONFIG -->
+<div class="config-grid">
+  <div class="config-card hot">
+    <div class="config-title">// FASE 1 — INÍCIO · 27.7°</div>
+    <div class="config-row">
+      <div class="cfg-group"><label>LAP BASE (s)</label><input class="cfg-input" id="p1_lap" type="number" value="107.0" step="0.1"></div>
+      <div class="cfg-group"><label>DURAÇÃO (min)</label><input class="cfg-input" id="p1_dur" type="number" value="120" step="5"></div>
+    </div>
+    <div class="config-row">
+      <div class="cfg-group"><label>RAMP (s total)<br><span style="color:var(--muted);font-size:8px;letter-spacing:0;font-weight:300">variação total do lap time na fase · (+) piora · (−) melhora</span></label><input class="cfg-input" id="p1_ramp" type="number" value="2.5" step="0.1"></div>
+      <div class="cfg-group"><label>COMBUSTÍVEL (L/v)</label><input class="cfg-input" id="p1_fuel" type="number" value="3.30" step="0.01"></div>
+    </div>
+    <div class="cfg-hint">1:47.x médio · pista fria · <strong>26v / 87.2 L</strong></div>
+  </div>
+  <div class="config-card warm">
+    <div class="config-title">// FASE 2 — PICO CALOR · 47.2°</div>
+    <div class="config-row">
+      <div class="cfg-group"><label>LAP BASE (s)</label><input class="cfg-input" id="p2_lap" type="number" value="110.5" step="0.1"></div>
+      <div class="cfg-group"><label>DURAÇÃO (min)</label><input class="cfg-input" id="p2_dur" type="number" value="360" step="5"></div>
+    </div>
+    <div class="config-row">
+      <div class="cfg-group"><label>RAMP (s total)<br><span style="color:var(--muted);font-size:8px;letter-spacing:0;font-weight:300">variação total do lap time na fase · (+) piora · (−) melhora</span></label><input class="cfg-input" id="p2_ramp" type="number" value="2.0" step="0.1"></div>
+      <div class="cfg-group"><label>COMBUSTÍVEL (L/v)</label><input class="cfg-input" id="p2_fuel" type="number" value="3.26" step="0.01"></div>
+    </div>
+    <div class="cfg-hint">1:49.x início · pico ~1:51.x · descida gradual · <strong>26v / 87.2 L</strong></div>
+  </div>
+  <div class="config-card cool">
+    <div class="config-title">// FASE 3 — NOITE · 22.7°</div>
+    <div class="config-row">
+      <div class="cfg-group"><label>LAP BASE (s)</label><input class="cfg-input" id="p3_lap" type="number" value="107.3" step="0.1"></div>
+      <div class="cfg-group"><label>DURAÇÃO (min)</label><input class="cfg-input" id="p3_dur" type="number" value="240" step="5"></div>
+    </div>
+    <div class="config-row">
+      <div class="cfg-group"><label>RAMP (s total)<br><span style="color:var(--muted);font-size:8px;letter-spacing:0;font-weight:300">variação total do lap time na fase · (+) piora · (−) melhora</span></label><input class="cfg-input" id="p3_ramp" type="number" value="-1.2" step="0.1"></div>
+      <div class="cfg-group"><label>COMBUSTÍVEL (L/v)</label><input class="cfg-input" id="p3_fuel" type="number" value="3.25" step="0.01"></div>
+    </div>
+    <div class="cfg-hint">1:47.x baixo → 1:46.x baixo · noite fria · <strong>26v / 87.2 L</strong></div>
+  </div>
+</div>
+
+<!-- PIT CONFIG -->
+<div class="pit-row">
+  <div class="pit-title">// PIT STOP DELTAS</div>
+  <div class="pit-inner">
+    <div class="cfg-group"><label>INLAP DELTA F1 (s)</label><input class="cfg-input" id="pit_in1" type="number" value="7.7" step="0.1" title="1:54.687 - 1:47.0 = 7.7s"></div>
+    <div class="cfg-group"><label>OUTLAP DELTA F1 (s)</label><input class="cfg-input" id="pit_out1" type="number" value="60.0" step="0.1" title="2:47.0 - 1:47.0 = 60s"></div>
+    <div class="cfg-group"><label>INLAP DELTA F2 (s)</label><input class="cfg-input" id="pit_in2" type="number" value="7.7" step="0.1"></div>
+    <div class="cfg-group"><label>OUTLAP DELTA F2 (s)</label><input class="cfg-input" id="pit_out2" type="number" value="60.0" step="0.1"></div>
+  </div>
+</div>
+
+<!-- SIM BUTTON -->
+<div class="sim-row">
+  <button class="sim-btn" onclick="simulate()">▶ SIMULAR 12 HORAS</button>
+  <div class="sim-note">
+    Simula volta a volta com degradação por fase e pit times.<br>
+    Edita o <strong>L/volta por stint</strong> na tabela — impacto propagado automaticamente.
+  </div>
+</div>
+
+<!-- KPI -->
+<div class="kpi-grid" id="kpiGrid">
+  <div class="kpi gold"><div class="kpi-lbl">VOLTAS PREVISTAS</div><div class="kpi-val" style="color:var(--gold)">—</div><div class="kpi-unit">aguarda simulação</div></div>
+  <div class="kpi cyan"><div class="kpi-lbl">TEMPO MÉDIO</div><div class="kpi-val" style="color:var(--cyan)">—</div><div class="kpi-unit">s/volta</div></div>
+  <div class="kpi green"><div class="kpi-lbl">STINTS TOTAIS</div><div class="kpi-val" style="color:var(--green)">—</div><div class="kpi-unit">pit stops</div></div>
+  <div class="kpi orange"><div class="kpi-lbl">TEMPO EM PISTA</div><div class="kpi-val" style="color:var(--orange)">—</div><div class="kpi-unit">racing time</div></div>
+  <div class="kpi red"><div class="kpi-lbl">TEMPO EM PIT</div><div class="kpi-val" style="color:var(--red)">—</div><div class="kpi-unit">total perdido</div></div>
+  <div class="kpi purple"><div class="kpi-lbl">ÚLTIMO STINT</div><div class="kpi-val" style="color:var(--purple)">—</div><div class="kpi-unit">voltas · 48 L</div></div>
+</div>
+
+<!-- CHART -->
+<div class="chart-wrap">
+  <div class="section-hdr">
+    <div class="section-title">EVOLUÇÃO TEMPOS DE VOLTA</div>
+    <div class="section-tag">// simulação volta a volta · 12h</div>
+  </div>
+  <div class="phase-legend-row">
+    <div class="legend-item"><div class="legend-dot" style="background:var(--hot)"></div>FASE 1 · INÍCIO · 27.7°</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--warm)"></div>FASE 2 · PICO CALOR · 47.2°</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--cool)"></div>FASE 3 · NOITE · 22.7°</div>
+    <div class="legend-item" style="margin-left:auto"><span id="chartStats" style="color:var(--muted)">—</span></div>
+  </div>
+  <div class="chart-canvas-wrap">
+    <canvas id="lapChart"></canvas>
+  </div>
+</div>
+
+<!-- TABLE -->
+<div class="table-section">
+  <div class="table-header-area">
+    <div>
+      <div class="section-title">STINTS · FUEL MANAGEMENT</div>
+      <div class="section-tag">// edita L/volta por stint · propagação automática · ↺ reverte para base</div>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <button class="reset-all-btn" onclick="resetAllFuelOverrides()">↺ RESET TUDO</button>
+      <div id="alertBanner" class="alert-banner alert-ok">// AGUARDA SIMULAÇÃO</div>
+    </div>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:3px;padding:0"></th>
+        <th>#</th>
+        <th>Voltas</th>
+        <th>V.Acum</th>
+        <th>Lap Médio</th>
+        <th>L/volta</th>
+        <th>Consumo stint</th>
+        <th>Margem tank</th>
+        <th>Refuel pit</th>
+        <th>Tempo stint</th>
+      </tr>
+    </thead>
+    <tbody id="stintBody"></tbody>
+  </table>
+</div>
+
+<!-- RESULTS -->
+<div class="results-grid" id="resultsGrid">
+  <div class="res-card gold"><div class="res-title">// AGUARDA SIMULAÇÃO</div><div class="res-body">Clica <strong>SIMULAR 12 HORAS</strong><br>para calcular todas as voltas.</div></div>
+  <div class="res-card cyan"><div class="res-title">// OVERRIDE COMBUSTÍVEL</div><div class="res-body">Edita <strong>L/volta por stint</strong> diretamente.<br>O consumo, margem e refuel<br>propagam-se automaticamente.<br>Clica <strong>↺</strong> por linha para reverter.</div></div>
+  <div class="res-card green"><div class="res-title">// METODOLOGIA</div><div class="res-body">Degradação linear por fase.<br>Pit time deduzido do tempo total.<br>Último stint calculado sobre <strong>48 L</strong>.<br>Stints criados automaticamente.</div></div>
+</div>
+
+</div>
+
+<script>
+const TANK = 87.2;
+const LAST_PIT_FUEL = 48;
+const RACE_SEC = 720 * 60;
+
+// Per-stint overrides
+let fuelOverrides = {};   // { stintNum: lpm }
+let refuelOverrides = {}; // { stintNum: litres }
+// Simulated stints (rebuilt on simulate())
+let simStints = [];
+let chartInstance = null;
+
+function gv(id){ return parseFloat(document.getElementById(id).value) || 0; }
+
+function fmtT(s){
+  const m = Math.floor(s/60);
+  const sec = (s%60).toFixed(3).padStart(6,'0');
+  return `${m}:${sec}`;
+}
+function fmtMS(s){
+  const m = Math.floor(s/60);
+  const rem = (s%60).toFixed(1);
+  return `${m}:${String(Math.floor(s%60)).padStart(2,'0')}.${Math.round((s%1)*10)}`;
+}
+function fmt(n,d=2){ return Number(n).toFixed(d); }
+
+// ── SIMULATION ──────────────────────────────────────────────────────────────
+function simulate(){
+  const phases = [
+    { id:'hot',  lapBase:gv('p1_lap'), durMin:gv('p1_dur'), ramp:gv('p1_ramp'), fuel:gv('p1_fuel'), inD:gv('pit_in1'), outD:gv('pit_out1') },
+    { id:'warm', lapBase:gv('p2_lap'), durMin:gv('p2_dur'), ramp:gv('p2_ramp'), fuel:gv('p2_fuel'), inD:gv('pit_in2'), outD:gv('pit_out2') },
+    { id:'cool', lapBase:gv('p3_lap'), durMin:gv('p3_dur'), ramp:gv('p3_ramp'), fuel:gv('p3_fuel'), inD:gv('pit_in2'), outD:gv('pit_out2') },  ];
+  // Clamp total duration to 720 min
+  const totDur = phases.reduce((s,p)=>s+p.durMin,0);
+  if(Math.abs(totDur-720)>0.5) phases[2].durMin += (720-totDur);
+
+  function getPhase(raceT){
+    let t=0; for(const p of phases){ t+=p.durMin*60; if(raceT<t) return p; } return phases[phases.length-1];
+  }
+  function getLapTime(raceT){
+    // Build phase boundaries
+    const bounds = [];
+    let t = 0;
+    for(const p of phases){ bounds.push(t); t += p.durMin*60; }
+    bounds.push(t); // end
+
+    // Phase 1: linear ramp (warms up linearly)
+    // Phase 2: arc — rises to peak at ~55% then falls (asymmetric bell, hotter in afternoon)
+    // Phase 3: linear ramp downward (cooling night)
+    // Cross-phase continuity: start of each phase anchored to end of previous
+
+    // Compute boundary lap times for continuity
+    const p1End  = phases[0].lapBase + phases[0].ramp / 2;           // end of F1
+    const p2Peak = phases[1].lapBase + phases[1].ramp / 2;           // peak of F2 (hottest)
+    const p2Start = p1End;                                            // F2 starts where F1 ends
+    const p2End  = p2Start + (phases[1].lapBase - phases[1].ramp/2) - phases[1].lapBase; // mirror decay
+    // Simpler: F2 arc anchored: start = p1End, peak = p2Peak, end = p2Start - 0.8s (still warm)
+    const p2EndVal = p1End - 0.8;   // F2 ends slightly below its own start (track still warm)
+    const p3Start  = p2EndVal;      // F3 starts where F2 ends (continuity)
+    const p3End    = p3Start + phases[2].ramp; // ramp is negative so end < start
+
+    if(raceT < bounds[1]){
+      // Phase 1: linear from (lapBase - ramp/2) to p1End
+      const prog = (raceT - bounds[0]) / (bounds[1] - bounds[0]);
+      const p1Start = phases[0].lapBase - phases[0].ramp / 2;
+      return p1Start + (p1End - p1Start) * prog;
+    }
+    if(raceT < bounds[2]){
+      // Phase 2: arc — smooth rise to peak then fall
+      // Peak at 55% of phase duration (afternoon hottest)
+      const prog = (raceT - bounds[1]) / (bounds[2] - bounds[1]);
+      const peakPos = 0.55;
+      let arc;
+      if(prog <= peakPos){
+        // rise: start → peak
+        const t2 = prog / peakPos;
+        // ease-in curve (slow start, accelerates)
+        arc = p2Start + (p2Peak - p2Start) * (t2 * t2);
+      } else {
+        // fall: peak → end (gentler slope)
+        const t2 = (prog - peakPos) / (1 - peakPos);
+        // ease-out curve (fast fall, slows near end)
+        arc = p2Peak + (p2EndVal - p2Peak) * (1 - (1 - t2) * (1 - t2));
+      }
+      return arc;
+    }
+    // Phase 3: linear from p3Start to p3End
+    const prog = (raceT - bounds[2]) / (bounds[3] - bounds[2]);
+    return p3Start + (p3End - p3Start) * prog;
+  }
+
+  // Clear overrides on fresh simulate (only lap-time overrides; keep fuel overrides if user wants)
+  // Actually reset fuel overrides too for clean state
+  fuelOverrides = {};
+  refuelOverrides = {};
+
+  let raceTime=0, lapCount=0, stintNum=0, totalPitTime=0;
+  const allLapT=[], allLapN=[], allLapPhase=[];
+  simStints=[];
+
+  while(raceTime < RACE_SEC && stintNum < 40){
+    stintNum++;
+    const ph = getPhase(raceTime);
+    const baseFuel = ph.fuel;
+    const maxLapsFull = Math.floor(TANK / baseFuel);        // 26
+    const maxLapsLast = Math.floor(LAST_PIT_FUEL / baseFuel); // 14
+
+    // Simulate this stint lap by lap
+    let stLaps=0, stTime=0, stFuel=0, stLapTimes=[];
+
+    for(let li=0; li<maxLapsFull; li++){
+      if(raceTime+stTime >= RACE_SEC) break;
+      const lt = getLapTime(raceTime+stTime);
+      // Last lap of stint: add inlap delta
+      const isLastLap = li===maxLapsFull-1;
+      const lapWithPit = isLastLap ? lt+ph.inD : lt;
+      if(raceTime+stTime+lapWithPit > RACE_SEC+45) break;
+      stLaps++; stTime+=lapWithPit; stFuel+=baseFuel;
+      stLapTimes.push(lt); lapCount++;
+      allLapT.push(+lt.toFixed(3)); allLapN.push(lapCount); allLapPhase.push(ph.id);
+    }
+    if(stLaps===0) break;
+
+    const avgLap = stLapTimes.reduce((a,b)=>a+b,0)/stLapTimes.length;
+    const timeLeft = RACE_SEC - (raceTime+stTime);
+    const roughLapsLeft = timeLeft>0 ? timeLeft/ph.lapBase : 0;
+    const isLast = roughLapsLeft <= maxLapsLast+1 || timeLeft<0;
+
+    let outlapTime=0;
+    if(!isLast && timeLeft>ph.outD){
+      outlapTime=ph.outD; totalPitTime+=ph.inD+ph.outD;
+    }
+
+    simStints.push({
+      num:stintNum, laps:stLaps, cumLaps:lapCount,
+      phase:ph, avgLap, stintTimeSec:stTime,
+      baseFuel, // phase-default L/v
+      isLast,
+    });
+
+    raceTime+=stTime+outlapTime;
+    if(isLast) break;
+  }
+
+  renderAll(phases, allLapT, allLapN, allLapPhase, totalPitTime);
+}
+
+// ── FUEL PROPAGATION ────────────────────────────────────────────────────────
+function getFuelLpm(stintNum, baseFuel){
+  return fuelOverrides[stintNum] !== undefined ? fuelOverrides[stintNum] : baseFuel;
+}
+
+function resetAllFuelOverrides(){
+  fuelOverrides={};
+  refuelOverrides={};
+  renderTable();
+  updateBannerAndKpiFuel();
+}
+function resetFuelOverride(num){
+  delete fuelOverrides[num];
+  renderTable();
+  updateBannerAndKpiFuel();
+}
+function applyFuelOverride(num, val, baseFuel){
+  const v=parseFloat(val);
+  if(!isNaN(v)&&v>0) fuelOverrides[num]=v;
+  else delete fuelOverrides[num];
+  renderTable();
+  updateBannerAndKpiFuel();
+}
+function getRefuel(stintNum, isLast, laps, lpm){
+  if(refuelOverrides[stintNum]!==undefined) return refuelOverrides[stintNum];
+  if(isLast) return +(laps * lpm).toFixed(2); // exact fuel for remaining laps
+  return TANK;
+}
+function resetRefuelOverride(num){
+  delete refuelOverrides[num];
+  renderTable();
+  updateBannerAndKpiFuel();
+}
+function applyRefuelOverride(num, val){
+  const v=parseFloat(val);
+  if(!isNaN(v)&&v>0) refuelOverrides[num]=v;
+  else delete refuelOverrides[num];
+  renderTable();
+  updateBannerAndKpiFuel();
+}
+
+// ── RENDER TABLE ─────────────────────────────────────────────────────────────
+function buildEffectiveStints(){
+  const totalSimLaps = simStints.reduce((a,s) => a + s.laps, 0);
+  let cumLaps = 0;
+  return simStints.map((s) => {
+    const isLast     = s.isLast;
+    const lpm        = getFuelLpm(s.num, s.baseFuel);
+    const isLpmOv    = fuelOverrides[s.num] !== undefined;
+    const isRefuelOv = refuelOverrides[s.num] !== undefined;
+
+    let laps;
+    if(isLast){
+      laps = Math.max(0, totalSimLaps - cumLaps);
+    } else {
+      // For normal stints, refuel is always TANK unless overridden
+      const refuelForCalc = refuelOverrides[s.num] !== undefined ? refuelOverrides[s.num] : TANK;
+      laps = Math.floor(refuelForCalc / lpm);
+    }
+
+    const refuel     = getRefuel(s.num, isLast, laps, lpm);
+    const baseRefuel = isLast ? +(laps * s.baseFuel).toFixed(2) : TANK;
+    const consumed   = +(lpm * laps).toFixed(2);
+    const tankMargin = +(refuel - consumed).toFixed(2);
+    cumLaps += laps;
+
+    return { ...s, laps, cumLaps, lpm, refuel, baseRefuel, consumed, tankMargin, isLpmOv, isRefuelOv };
+  });
+}
+
+function renderTable(){
+  if(!simStints.length) return;
+  const tbody = document.getElementById('stintBody');
+  const effective = buildEffectiveStints();
+  const totalLaps = effective.reduce((a,s) => a + s.laps, 0);
+
+  // Update the VOLTAS PREVISTAS KPI live
+  const kpiVolt = document.querySelector('#kpiGrid .kpi.gold .kpi-val');
+  if(kpiVolt) kpiVolt.textContent = totalLaps;
+
+  tbody.innerHTML = effective.map(s => {
+    const isOv = s.isLpmOv || s.isRefuelOv;
+    const overFuel = s.consumed > s.refuel + 0.05;
+    const fuelPct  = Math.min(100, (s.consumed / s.refuel) * 100);
+    const barColor = overFuel ? 'var(--red)' : s.tankMargin < 2 ? 'var(--orange)' : 'var(--green)';
+    const rowClass = s.isLast ? 'last-stint' : isOv ? 'overridden' : '';
+    const stripeColor = s.phase.id==='hot' ? 'var(--hot)' : s.phase.id==='warm' ? 'var(--warm)' : 'var(--cool)';
+
+    return `<tr class="${rowClass}">
+      <td class="phase-stripe" style="background:${stripeColor};width:3px;padding:0;border-bottom:1px solid rgba(28,32,40,.55)"></td>
+      <td class="num ${isOv?'purple':'gold'}">${String(s.num).padStart(2,'0')}${isOv?'<span style="font-size:8px;margin-left:2px">●</span>':''}</td>
+      <td class="num">${s.laps}</td>
+      <td class="muted">${s.cumLaps}</td>
+      <td class="cyan">${fmtT(s.avgLap)}</td>
+      <td>
+        <div class="fuel-input-wrap">
+          <input class="fuel-ov-input ${s.isLpmOv?'modified':''}" type="number"
+            value="${fmt(s.lpm,3)}" min="2.5" max="4.5" step="0.001"
+            onchange="applyFuelOverride(${s.num},this.value,${s.baseFuel})"
+            title="L/volta. Base fase: ${fmt(s.baseFuel,3)}">
+          ${s.isLpmOv?`<button class="ov-reset-btn" onclick="resetFuelOverride(${s.num})" title="↺ ${fmt(s.baseFuel,3)}">↺</button><span class="ov-badge">OV</span>`:''}
+        </div>
+      </td>
+      <td>
+        <div class="fuel-bar-cell">
+          <div class="mini-bar-bg"><div class="mini-bar" style="width:${fuelPct}%;background:${barColor}"></div></div>
+          <span style="color:${barColor}">${fmt(s.consumed)} L</span>
+        </div>
+      </td>
+      <td class="${overFuel?'red':s.tankMargin<2?'orange':'green'}">${fmt(s.tankMargin)} L</td>
+      <td>
+        <div class="fuel-input-wrap">
+          <input class="fuel-ov-input ${s.isRefuelOv?'modified':''}" type="number"
+            value="${fmt(s.refuel,1)}" min="1" max="90" step="0.1"
+            onchange="applyRefuelOverride(${s.num},this.value)"
+            title="Litros a abastecer. Base: ${fmt(s.baseRefuel,1)} L">
+          ${s.isRefuelOv?`<button class="ov-reset-btn" onclick="resetRefuelOverride(${s.num})" title="↺ ${fmt(s.baseRefuel,1)} L">↺</button><span class="ov-badge">OV</span>`:''}
+        </div>
+      </td>
+      <td class="muted">${fmt(s.stintTimeSec/60,1)} min</td>
+    </tr>`;
+  }).join('');
+}
+
+function updateBannerAndKpiFuel(){
+  if(!simStints.length) return;
+  const effective = buildEffectiveStints();
+  const ovCount = Object.keys(fuelOverrides).length + Object.keys(refuelOverrides).length;
+  const totalLaps = effective.reduce((a,s) => a + s.laps, 0);
+  const lastS = effective[effective.length - 1];
+  const anyOver = effective.some(s => s.consumed > s.refuel + 0.05);
+  const lastOver = lastS.consumed > lastS.refuel + 0.05;
+  const banner = document.getElementById('alertBanner');
+  if(lastOver){
+    banner.className='alert-banner alert-crit';
+    banner.textContent=`⚠ STINT FINAL EXCEDE 48 L — FALTAM ${fmt(lastS.consumed - lastS.refuel,1)} L · ADICIONA STINTS`;
+  } else if(anyOver){
+    banner.className='alert-banner alert-crit';
+    banner.textContent='⚠ COMBUSTÍVEL INSUFICIENTE EM ALGUM STINT';
+  } else if(ovCount>0){
+    banner.className='alert-banner alert-warn';
+    banner.textContent=`⚡ ${ovCount} OVERRIDE(S) · ${totalLaps} VOLTAS · ÚLTIMO: ${lastS.laps}v`;
+  } else {
+    banner.className='alert-banner alert-ok';
+    banner.textContent=`✓ ${totalLaps} VOLTAS · ${simStints.length} STINTS · ÚLTIMO: ${lastS.laps}v`;
+  }
+}
+
+// ── RENDER ALL (after simulate) ──────────────────────────────────────────────
+function renderAll(phases, allLapT, allLapN, allLapPhase, totalPitTime){
+  const totalLaps=simStints.reduce((a,s)=>a+s.laps,0);
+  const lastS=simStints[simStints.length-1];
+  const avgLap=allLapT.reduce((a,b)=>a+b,0)/allLapT.length;
+  const pitCount=simStints.length-1;
+  const totalRaceSec=simStints.reduce((a,s)=>a+s.stintTimeSec,0)+totalPitTime;
+  const trackTime=totalRaceSec-totalPitTime;
+
+  // KPIs
+  document.getElementById('kpiGrid').innerHTML=[
+    {cls:'gold',  lbl:'VOLTAS PREVISTAS', val:totalLaps,                    unit:'volta a volta'},
+    {cls:'cyan',  lbl:'TEMPO MÉDIO',       val:fmtT(avgLap),                 unit:'por volta'},
+    {cls:'green', lbl:'STINTS TOTAIS',     val:simStints.length,             unit:`${pitCount} pit stops`},
+    {cls:'orange',lbl:'TEMPO EM PISTA',    val:fmt(trackTime/3600,2)+'h',    unit:'excl. pit lane'},
+    {cls:'red',   lbl:'TEMPO EM PIT',      val:fmt(totalPitTime/60,1)+'min', unit:`${pitCount} paragens`},
+    {cls:'purple',lbl:'ÚLTIMO STINT',      val:lastS.laps,                   unit:'voltas · 48 L'},
+  ].map((k,i)=>`
+    <div class="kpi ${k.cls}" style="animation-delay:${i*.05}s">
+      <div class="kpi-lbl">${k.lbl}</div>
+      <div class="kpi-val">${k.val}</div>
+      <div class="kpi-unit">${k.unit}</div>
+    </div>`).join('');
+
+  // Chart
+  if(chartInstance) chartInstance.destroy();
+  const colorMap={hot:'rgba(232,82,74,0.85)',warm:'rgba(232,154,60,0.85)',cool:'rgba(62,207,120,0.85)'};
+  const pointColors=allLapPhase.map(p=>colorMap[p]||'#d4a843');
+  const ctx=document.getElementById('lapChart').getContext('2d');
+  chartInstance=new Chart(ctx,{
+    type:'line',
+    data:{
+      labels:allLapN,
+      datasets:[{
+        label:'Lap Time',data:allLapT,
+        borderColor:'rgba(212,168,67,0.5)',borderWidth:1,
+        pointRadius:1.5,pointHoverRadius:4,
+        pointBackgroundColor:pointColors,pointBorderColor:pointColors,
+        fill:true,backgroundColor:'rgba(212,168,67,0.05)',tension:0.35,
+      }]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      animation:{duration:500,easing:'easeOutQuart'},
+      plugins:{
+        legend:{display:false},
+        tooltip:{backgroundColor:'#0d0f12',borderColor:'#252b35',borderWidth:1,
+          titleColor:'#d4a843',bodyColor:'#dce2ec',
+          callbacks:{title:c=>`Volta ${c[0].label}`,label:c=>fmtT(c.raw)}}
+      },
+      scales:{
+        x:{grid:{color:'rgba(28,32,40,.7)'},
+          ticks:{color:'#505870',font:{family:'DM Mono',size:9},maxTicksLimit:14},
+          title:{display:true,text:'Nº Volta',color:'#505870',font:{family:'DM Mono',size:9}}},
+        y:{grid:{color:'rgba(28,32,40,.7)'},
+          ticks:{color:'#505870',font:{family:'DM Mono',size:9},callback:v=>fmtT(v)},
+          title:{display:true,text:'s',color:'#505870',font:{family:'DM Mono',size:9}}}
+      }
+    }
+  });
+
+  document.getElementById('chartStats').textContent=
+    `mín ${fmtT(Math.min(...allLapT))} · máx ${fmtT(Math.max(...allLapT))} · avg ${fmtT(avgLap)}`;
+
+  // Table
+  renderTable();
+  updateBannerAndKpiFuel();
+
+  // Phase breakdown
+  const phaseNames={hot:'INÍCIO',warm:'PICO CALOR',cool:'NOITE'};
+  const phaseBreakdown=phases.map(p=>{
+    const ps=simStints.filter(s=>!s.isLast&&s.phase.id===p.id);
+    const laps=ps.reduce((a,s)=>a+s.laps,0);
+    return laps>0?`${phaseNames[p.id]}: <strong>${ps.length} stints · ${laps}v</strong>`:null;
+  }).filter(Boolean);
+
+  document.getElementById('resultsGrid').innerHTML=`
+    <div class="res-card gold">
+      <div class="res-title">// BREAKDOWN POR FASE</div>
+      <div class="res-body">
+        ${phaseBreakdown.join('<br>')}
+        <br>Último stint: <strong>${lastS.laps}v · 48 L</strong>
+        <br>Total: <strong>${totalLaps} voltas · ${simStints.length} stints</strong>
+      </div>
+    </div>
+    <div class="res-card cyan">
+      <div class="res-title">// PARA O SIMULADOR</div>
+      <div class="res-body">
+        Voltas base: <strong>${totalLaps}</strong><br>
+        Cenário conservador: <strong>${totalLaps-4}</strong><br>
+        Cenário otimista: <strong>${totalLaps+2}</strong><br>
+        Pit stops: <strong>${pitCount}</strong> · Tempo pit: <strong>${fmt(totalPitTime/60,1)} min</strong>
+      </div>
+    </div>
+    <div class="res-card green">
+      <div class="res-title">// OVERRIDE COMBUSTÍVEL</div>
+      <div class="res-body">
+        Edita <strong>L/volta</strong> em qualquer stint.<br>
+        Consumo e margem propagam-se.<br>
+        Linha roxa = override ativo.<br>
+        <strong>↺</strong> reverte · <strong>RESET TUDO</strong> limpa todos.
+      </div>
+    </div>
+  `;
+}
+
+// Load Chart.js and auto-simulate
+const s=document.createElement('script');
+s.src='https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js';
+s.onload=()=>simulate();
+document.head.appendChild(s);
+</script>
+</body>
+</html>
