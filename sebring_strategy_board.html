@@ -150,6 +150,65 @@ td.num{font-size:13px;color:var(--white);font-weight:500}
 .res-body{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);line-height:1.85}
 .res-body strong{color:var(--text)}
 
+.driver-select {
+  background: #0d0f12;
+  border: 1px solid var(--border2);
+  color: var(--white);
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  padding: 4px 6px;
+  outline: none;
+  cursor: pointer;
+  transition: border-color .2s;
+  width: 78px;
+  appearance: none;
+}
+.driver-select:focus { border-color: var(--cyan); }
+.driver-select.solipa { border-left: 2px solid #4a8fe8; color: #7ab4f0; }
+.driver-select.fialho { border-left: 2px solid #e89a3c; color: #f0c070; }
+.driver-select.preto  { border-left: 2px solid #a06ae8; color: #c09af0; }
+.driver-select option { background: #0d0f12; color: var(--white); }
+
+.driver-card {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  padding: 18px 20px;
+  position: relative;
+  overflow: hidden;
+}
+.driver-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; }
+.driver-card.solipa::before { background: #4a8fe8; }
+.driver-card.fialho::before { background: #e89a3c; }
+.driver-card.preto::before  { background: #a06ae8; }
+.driver-card-name {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 14px; font-weight: 800; letter-spacing: 2px;
+  margin-bottom: 14px;
+}
+.driver-card.solipa .driver-card-name { color: #7ab4f0; }
+.driver-card.fialho .driver-card-name { color: #f0c070; }
+.driver-card.preto  .driver-card-name { color: #c09af0; }
+.driver-stat { display:flex; justify-content:space-between; align-items:center; margin-bottom:7px; }
+.driver-stat-lbl { font-family:'DM Mono',monospace; font-size:10px; color:var(--muted); }
+.driver-stat-val { font-family:'DM Mono',monospace; font-size:12px; color:var(--text); font-weight:500; }
+.driver-bar-bg { height:3px; background:var(--border2); margin-top:12px; }
+.driver-bar-fill { height:100%; transition:width .4s; }
+.driver-card.solipa .driver-bar-fill { background:#4a8fe8; }
+.driver-card.fialho .driver-bar-fill { background:#e89a3c; }
+.driver-card.preto  .driver-bar-fill { background:#a06ae8; }
+.driver-tl-block {
+  display:flex; align-items:center; justify-content:center;
+  font-family:'DM Mono',monospace; font-size:9px;
+  color:rgba(0,0,0,.7); font-weight:500;
+  cursor:default; transition:filter .15s;
+}
+.driver-tl-block:hover { filter:brightness(1.2); }
+.driver-tl-block.solipa { background:#4a8fe8; }
+.driver-tl-block.fialho { background:#e89a3c; }
+.driver-tl-block.preto  { background:#a06ae8; }
+.driver-legend-item { display:flex; align-items:center; gap:6px; font-family:'DM Mono',monospace; font-size:10px; color:var(--muted); }
+.driver-legend-dot { width:10px; height:10px; border-radius:2px; flex-shrink:0; }
+
 @media(max-width:900px){
   .kpi-grid{grid-template-columns:repeat(3,1fr)}
   .config-grid{grid-template-columns:1fr}
@@ -217,12 +276,16 @@ td.num{font-size:13px;color:var(--white);font-weight:500}
 
 <!-- PIT CONFIG -->
 <div class="pit-row">
-  <div class="pit-title">// PIT STOP DELTAS</div>
+  <div class="pit-title">// PIT STOP DELTAS · RACE START</div>
   <div class="pit-inner">
     <div class="cfg-group"><label>INLAP DELTA F1 (s)</label><input class="cfg-input" id="pit_in1" type="number" value="7.7" step="0.1" title="1:54.687 - 1:47.0 = 7.7s"></div>
     <div class="cfg-group"><label>OUTLAP DELTA F1 (s)</label><input class="cfg-input" id="pit_out1" type="number" value="60.0" step="0.1" title="2:47.0 - 1:47.0 = 60s"></div>
     <div class="cfg-group"><label>INLAP DELTA F2 (s)</label><input class="cfg-input" id="pit_in2" type="number" value="7.7" step="0.1"></div>
     <div class="cfg-group"><label>OUTLAP DELTA F2 (s)</label><input class="cfg-input" id="pit_out2" type="number" value="60.0" step="0.1"></div>
+    <div class="cfg-group" style="grid-column:span 2">
+      <label>RACE START · GMT</label>
+      <input class="cfg-input" id="race_start_gmt" type="time" value="10:10" onchange="renderTable();updateBannerAndKpiFuel()" style="font-size:16px;padding:8px 10px;color:var(--gold);border-color:var(--gold);letter-spacing:2px">
+    </div>
   </div>
 </div>
 
@@ -279,6 +342,7 @@ td.num{font-size:13px;color:var(--white);font-weight:500}
       <tr>
         <th style="width:3px;padding:0"></th>
         <th>#</th>
+        <th>Piloto</th>
         <th>Voltas</th>
         <th>V.Acum</th>
         <th>Lap Médio</th>
@@ -287,6 +351,7 @@ td.num{font-size:13px;color:var(--white);font-weight:500}
         <th>Margem tank</th>
         <th>Refuel pit</th>
         <th>Tempo stint</th>
+        <th>Início GMT</th>
       </tr>
     </thead>
     <tbody id="stintBody"></tbody>
@@ -300,16 +365,34 @@ td.num{font-size:13px;color:var(--white);font-weight:500}
   <div class="res-card green"><div class="res-title">// METODOLOGIA</div><div class="res-body">Degradação linear por fase.<br>Pit time deduzido do tempo total.<br>Último stint calculado sobre <strong>48 L</strong>.<br>Stints criados automaticamente.</div></div>
 </div>
 
+<!-- DRIVER SUMMARY -->
+<div id="driverSummary" style="display:none;margin-top:22px;animation:fadeIn .35s .3s ease both">
+  <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:14px">
+    <div class="section-title">DISTRIBUIÇÃO POR PILOTO</div>
+    <div class="section-tag">// stints · voltas · combustível · tempo estimado</div>
+  </div>
+  <div id="driverCards" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px"></div>
+  <div style="background:var(--surface);border:1px solid var(--border);padding:16px 20px">
+    <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:12px">
+      <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--gold)">DISTRIBUIÇÃO DE STINTS</div>
+    </div>
+    <div id="driverTimeline" style="display:flex;height:28px;gap:2px;margin-bottom:8px"></div>
+    <div id="driverLegend" style="display:flex;gap:20px;flex-wrap:wrap"></div>
+  </div>
+</div>
+
 </div>
 
 <script>
 const TANK = 87.2;
 const LAST_PIT_FUEL = 48;
 const RACE_SEC = 720 * 60;
+const DRIVERS = ['Solipa', 'Fialho', 'Preto'];
 
 // Per-stint overrides
-let fuelOverrides = {};   // { stintNum: lpm }
-let refuelOverrides = {}; // { stintNum: litres }
+let fuelOverrides = {};      // { stintNum: lpm }
+let refuelOverrides = {};    // { stintNum: litres }
+let driverAssignments = {};  // { stintNum: driverName }
 // Simulated stints (rebuilt on simulate())
 let simStints = [];
 let chartInstance = null;
@@ -327,6 +410,18 @@ function fmtMS(s){
   return `${m}:${String(Math.floor(s%60)).padStart(2,'0')}.${Math.round((s%1)*10)}`;
 }
 function fmt(n,d=2){ return Number(n).toFixed(d); }
+
+function getStartGMT(){
+  const val = document.getElementById('race_start_gmt').value || '10:10';
+  const [h,m] = val.split(':').map(Number);
+  return h * 3600 + m * 60; // seconds since midnight
+}
+function fmtGMT(totalSec){
+  const s = totalSec % 86400; // wrap at midnight
+  const h = Math.floor(s / 3600) % 24;
+  const m = Math.floor((s % 3600) / 60);
+  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')} GMT`;
+}
 
 // ── SIMULATION ──────────────────────────────────────────────────────────────
 function simulate(){
@@ -397,6 +492,7 @@ function simulate(){
   // Actually reset fuel overrides too for clean state
   fuelOverrides = {};
   refuelOverrides = {};
+  driverAssignments = {};
 
   let raceTime=0, lapCount=0, stintNum=0, totalPitTime=0;
   const allLapT=[], allLapN=[], allLapPhase=[];
@@ -457,8 +553,18 @@ function getFuelLpm(stintNum, baseFuel){
 function resetAllFuelOverrides(){
   fuelOverrides={};
   refuelOverrides={};
+  driverAssignments={};
   renderTable();
   updateBannerAndKpiFuel();
+}
+
+function getDriver(stintNum){
+  if(driverAssignments[stintNum] !== undefined) return driverAssignments[stintNum];
+  return DRIVERS[(stintNum - 1) % DRIVERS.length]; // default round-robin
+}
+function assignDriver(stintNum, name){
+  driverAssignments[stintNum] = name;
+  renderTable();
 }
 function resetFuelOverride(num){
   delete fuelOverrides[num];
@@ -529,48 +635,74 @@ function renderTable(){
   const kpiVolt = document.querySelector('#kpiGrid .kpi.gold .kpi-val');
   if(kpiVolt) kpiVolt.textContent = totalLaps;
 
-  tbody.innerHTML = effective.map(s => {
-    const isOv = s.isLpmOv || s.isRefuelOv;
-    const overFuel = s.consumed > s.refuel + 0.05;
-    const fuelPct  = Math.min(100, (s.consumed / s.refuel) * 100);
-    const barColor = overFuel ? 'var(--red)' : s.tankMargin < 2 ? 'var(--orange)' : 'var(--green)';
-    const rowClass = s.isLast ? 'last-stint' : isOv ? 'overridden' : '';
-    const stripeColor = s.phase.id==='hot' ? 'var(--hot)' : s.phase.id==='warm' ? 'var(--warm)' : 'var(--cool)';
+  tbody.innerHTML = (() => {
+    const startGMT = getStartGMT();
+    // pit stop outD per stint — use phase outD from simStints
+    let elapsedSec = 0;
+    return effective.map((s, idx) => {
+      const isOv = s.isLpmOv || s.isRefuelOv;
+      const overFuel = s.consumed > s.refuel + 0.05;
+      const fuelPct  = Math.min(100, (s.consumed / s.refuel) * 100);
+      const barColor = overFuel ? 'var(--red)' : s.tankMargin < 2 ? 'var(--orange)' : 'var(--green)';
+      const rowClass = s.isLast ? 'last-stint' : isOv ? 'overridden' : '';
+      const stripeColor = s.phase.id==='hot' ? 'var(--hot)' : s.phase.id==='warm' ? 'var(--warm)' : 'var(--cool)';
 
-    return `<tr class="${rowClass}">
-      <td class="phase-stripe" style="background:${stripeColor};width:3px;padding:0;border-bottom:1px solid rgba(28,32,40,.55)"></td>
-      <td class="num ${isOv?'purple':'gold'}">${String(s.num).padStart(2,'0')}${isOv?'<span style="font-size:8px;margin-left:2px">●</span>':''}</td>
-      <td class="num">${s.laps}</td>
-      <td class="muted">${s.cumLaps}</td>
-      <td class="cyan">${fmtT(s.avgLap)}</td>
-      <td>
-        <div class="fuel-input-wrap">
-          <input class="fuel-ov-input ${s.isLpmOv?'modified':''}" type="number"
-            value="${fmt(s.lpm,3)}" min="2.5" max="4.5" step="0.001"
-            onchange="applyFuelOverride(${s.num},this.value,${s.baseFuel})"
-            title="L/volta. Base fase: ${fmt(s.baseFuel,3)}">
-          ${s.isLpmOv?`<button class="ov-reset-btn" onclick="resetFuelOverride(${s.num})" title="↺ ${fmt(s.baseFuel,3)}">↺</button><span class="ov-badge">OV</span>`:''}
-        </div>
-      </td>
-      <td>
-        <div class="fuel-bar-cell">
-          <div class="mini-bar-bg"><div class="mini-bar" style="width:${fuelPct}%;background:${barColor}"></div></div>
-          <span style="color:${barColor}">${fmt(s.consumed)} L</span>
-        </div>
-      </td>
-      <td class="${overFuel?'red':s.tankMargin<2?'orange':'green'}">${fmt(s.tankMargin)} L</td>
-      <td>
-        <div class="fuel-input-wrap">
-          <input class="fuel-ov-input ${s.isRefuelOv?'modified':''}" type="number"
-            value="${fmt(s.refuel,1)}" min="1" max="90" step="0.1"
-            onchange="applyRefuelOverride(${s.num},this.value)"
-            title="Litros a abastecer. Base: ${fmt(s.baseRefuel,1)} L">
-          ${s.isRefuelOv?`<button class="ov-reset-btn" onclick="resetRefuelOverride(${s.num})" title="↺ ${fmt(s.baseRefuel,1)} L">↺</button><span class="ov-badge">OV</span>`:''}
-        </div>
-      </td>
-      <td class="muted">${fmt(s.stintTimeSec/60,1)} min</td>
-    </tr>`;
-  }).join('');
+      const driver = getDriver(s.num);
+      const driverClass = driver.toLowerCase();
+      const driverOpts = DRIVERS.map(d =>
+        `<option value="${d}" ${d===driver?'selected':''}>${d}</option>`
+      ).join('');
+
+      // GMT = race start + elapsed time so far (beginning of this stint)
+      const stintStartGMT = fmtGMT(startGMT + elapsedSec);
+
+      // Advance elapsed: stint time + outlap (pit stop) if not last
+      elapsedSec += s.stintTimeSec;
+      if(!s.isLast) elapsedSec += s.phase.outD || 60;
+
+      // Night indicator
+      const gmtH = Math.floor(((startGMT + elapsedSec - s.stintTimeSec) % 86400) / 3600);
+      const isNight = gmtH >= 20 || gmtH < 7;
+      const gmtStyle = isNight ? 'color:var(--purple)' : 'color:var(--gold)';
+
+      return `<tr class="${rowClass}">
+        <td class="phase-stripe" style="background:${stripeColor};width:3px;padding:0;border-bottom:1px solid rgba(28,32,40,.55)"></td>
+        <td class="num ${isOv?'purple':'gold'}">${String(s.num).padStart(2,'0')}${isOv?'<span style="font-size:8px;margin-left:2px">●</span>':''}</td>
+        <td><select class="driver-select ${driverClass}" onchange="assignDriver(${s.num},this.value);this.className='driver-select '+this.value.toLowerCase()">${driverOpts}</select></td>
+        <td class="num">${s.laps}</td>
+        <td class="muted">${s.cumLaps}</td>
+        <td class="cyan">${fmtT(s.avgLap)}</td>
+        <td>
+          <div class="fuel-input-wrap">
+            <input class="fuel-ov-input ${s.isLpmOv?'modified':''}" type="number"
+              value="${fmt(s.lpm,3)}" min="2.5" max="4.5" step="0.001"
+              onchange="applyFuelOverride(${s.num},this.value,${s.baseFuel})"
+              title="L/volta. Base fase: ${fmt(s.baseFuel,3)}">
+            ${s.isLpmOv?`<button class="ov-reset-btn" onclick="resetFuelOverride(${s.num})" title="↺ ${fmt(s.baseFuel,3)}">↺</button><span class="ov-badge">OV</span>`:''}
+          </div>
+        </td>
+        <td>
+          <div class="fuel-bar-cell">
+            <div class="mini-bar-bg"><div class="mini-bar" style="width:${fuelPct}%;background:${barColor}"></div></div>
+            <span style="color:${barColor}">${fmt(s.consumed)} L</span>
+          </div>
+        </td>
+        <td class="${overFuel?'red':s.tankMargin<2?'orange':'green'}">${fmt(s.tankMargin)} L</td>
+        <td>
+          <div class="fuel-input-wrap">
+            <input class="fuel-ov-input ${s.isRefuelOv?'modified':''}" type="number"
+              value="${fmt(s.refuel,1)}" min="1" max="90" step="0.1"
+              onchange="applyRefuelOverride(${s.num},this.value)"
+              title="Litros a abastecer. Base: ${fmt(s.baseRefuel,1)} L">
+            ${s.isRefuelOv?`<button class="ov-reset-btn" onclick="resetRefuelOverride(${s.num})" title="↺ ${fmt(s.baseRefuel,1)} L">↺</button><span class="ov-badge">OV</span>`:''}
+          </div>
+        </td>
+        <td class="muted">${fmt(s.stintTimeSec/60,1)} min</td>
+        <td style="${gmtStyle};font-weight:500">${stintStartGMT}${isNight?' 🌙':''}</td>
+      </tr>`;
+    }).join('');
+  })();
+  renderDriverSummary();
 }
 
 function updateBannerAndKpiFuel(){
@@ -595,6 +727,72 @@ function updateBannerAndKpiFuel(){
     banner.className='alert-banner alert-ok';
     banner.textContent=`✓ ${totalLaps} VOLTAS · ${simStints.length} STINTS · ÚLTIMO: ${lastS.laps}v`;
   }
+}
+
+// ── DRIVER SUMMARY ───────────────────────────────────────────────────────────
+function renderDriverSummary(){
+  if(!simStints.length) return;
+  const effective = buildEffectiveStints();
+  const totalLaps = effective.reduce((a,s) => a + s.laps, 0);
+  const totalFuel = effective.reduce((a,s) => a + s.consumed, 0);
+
+  const driverColors = { Solipa:'#4a8fe8', Fialho:'#e89a3c', Preto:'#a06ae8' };
+
+  // Aggregate per driver
+  const agg = {};
+  DRIVERS.forEach(d => { agg[d] = { stints:[], laps:0, fuel:0, timeSec:0 }; });
+  effective.forEach(s => {
+    const d = getDriver(s.num);
+    if(!agg[d]) agg[d] = { stints:[], laps:0, fuel:0, timeSec:0 };
+    agg[d].stints.push(s.num);
+    agg[d].laps += s.laps;
+    agg[d].fuel += s.consumed;
+    agg[d].timeSec += s.stintTimeSec;
+  });
+
+  // Cards
+  document.getElementById('driverCards').innerHTML = DRIVERS.map(d => {
+    const a = agg[d];
+    const lapPct = totalLaps > 0 ? (a.laps / totalLaps * 100).toFixed(1) : 0;
+    const avgLap = a.stints.length > 0
+      ? fmtT(a.timeSec / a.laps)
+      : '—';
+    const stintList = a.stints.length > 0
+      ? a.stints.map(n => String(n).padStart(2,'0')).join(' · ')
+      : '—';
+    const cls = d.toLowerCase();
+    return `<div class="driver-card ${cls}">
+      <div class="driver-card-name">${d.toUpperCase()}</div>
+      <div class="driver-stat"><span class="driver-stat-lbl">Stints</span><span class="driver-stat-val">${a.stints.length}</span></div>
+      <div class="driver-stat"><span class="driver-stat-lbl">Voltas</span><span class="driver-stat-val">${a.laps} <span style="color:var(--muted);font-size:10px">(${lapPct}%)</span></span></div>
+      <div class="driver-stat"><span class="driver-stat-lbl">Combustível</span><span class="driver-stat-val">${fmt(a.fuel,1)} L</span></div>
+      <div class="driver-stat"><span class="driver-stat-lbl">Lap médio</span><span class="driver-stat-val">${avgLap}</span></div>
+      <div class="driver-stat" style="margin-top:6px"><span class="driver-stat-lbl" style="font-size:9px">Stints: ${stintList}</span></div>
+      <div class="driver-bar-bg"><div class="driver-bar-fill" style="width:${lapPct}%"></div></div>
+    </div>`;
+  }).join('');
+
+  // Timeline
+  const tl = document.getElementById('driverTimeline');
+  tl.innerHTML = effective.map(s => {
+    const d = getDriver(s.num);
+    const cls = d.toLowerCase();
+    return `<div class="driver-tl-block ${cls}" style="flex:${s.laps}"
+      title="Stint ${String(s.num).padStart(2,'0')} · ${d} · ${s.laps}v">
+      <span>${s.num}</span>
+    </div>`;
+  }).join('');
+
+  // Legend
+  document.getElementById('driverLegend').innerHTML = DRIVERS.map(d => {
+    const a = agg[d];
+    return `<div class="driver-legend-item">
+      <div class="driver-legend-dot" style="background:${driverColors[d]}"></div>
+      <span>${d} — ${a.stints.length} stints · ${a.laps}v</span>
+    </div>`;
+  }).join('');
+
+  document.getElementById('driverSummary').style.display = 'block';
 }
 
 // ── RENDER ALL (after simulate) ──────────────────────────────────────────────
