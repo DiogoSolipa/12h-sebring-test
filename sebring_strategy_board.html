@@ -231,6 +231,7 @@ td.num{font-size:13px;color:var(--white);font-weight:500}
   <div style="text-align:right">
     <div class="car-badge">CADILLAC GTP</div>
     <div class="car-sub" style="margin-top:4px">HYPERCAR · IRACING</div>
+    <div id="syncStatus" style="font-family:'DM Mono',monospace;font-size:10px;margin-top:8px;color:var(--muted);letter-spacing:1px">● A inicializar...</div>
   </div>
 </div>
 
@@ -284,7 +285,7 @@ td.num{font-size:13px;color:var(--white);font-weight:500}
     <div class="cfg-group"><label>OUTLAP DELTA F2 (s)</label><input class="cfg-input" id="pit_out2" type="number" value="60.0" step="0.1"></div>
     <div class="cfg-group" style="grid-column:span 2">
       <label>RACE START · GMT</label>
-      <input class="cfg-input" id="race_start_gmt" type="time" value="10:10" onchange="renderTable();updateBannerAndKpiFuel()" style="font-size:16px;padding:8px 10px;color:var(--gold);border-color:var(--gold);letter-spacing:2px">
+      <input class="cfg-input" id="race_start_gmt" type="time" value="10:10" onchange="renderTable();updateBannerAndKpiFuel();saveToFirebase()" style="font-size:16px;padding:8px 10px;color:var(--gold);border-color:var(--gold);letter-spacing:2px">
     </div>
   </div>
 </div>
@@ -424,7 +425,7 @@ function fmtGMT(totalSec){
 }
 
 // ── SIMULATION ──────────────────────────────────────────────────────────────
-function simulate(){
+function simulate(keepOverrides = false){
   const phases = [
     { id:'hot',  lapBase:gv('p1_lap'), durMin:gv('p1_dur'), ramp:gv('p1_ramp'), fuel:gv('p1_fuel'), inD:gv('pit_in1'), outD:gv('pit_out1') },
     { id:'warm', lapBase:gv('p2_lap'), durMin:gv('p2_dur'), ramp:gv('p2_ramp'), fuel:gv('p2_fuel'), inD:gv('pit_in2'), outD:gv('pit_out2') },
@@ -490,9 +491,11 @@ function simulate(){
 
   // Clear overrides on fresh simulate (only lap-time overrides; keep fuel overrides if user wants)
   // Actually reset fuel overrides too for clean state
-  fuelOverrides = {};
-  refuelOverrides = {};
-  driverAssignments = {};
+  if(!keepOverrides){
+    fuelOverrides = {};
+    refuelOverrides = {};
+    driverAssignments = {};
+  }
 
   let raceTime=0, lapCount=0, stintNum=0, totalPitTime=0;
   const allLapT=[], allLapN=[], allLapPhase=[];
@@ -543,6 +546,7 @@ function simulate(){
   }
 
   renderAll(phases, allLapT, allLapN, allLapPhase, totalPitTime);
+  if(!keepOverrides) saveToFirebase();
 }
 
 // ── FUEL PROPAGATION ────────────────────────────────────────────────────────
@@ -565,11 +569,13 @@ function getDriver(stintNum){
 function assignDriver(stintNum, name){
   driverAssignments[stintNum] = name;
   renderTable();
+  saveToFirebase();
 }
 function resetFuelOverride(num){
   delete fuelOverrides[num];
   renderTable();
   updateBannerAndKpiFuel();
+  saveToFirebase();
 }
 function applyFuelOverride(num, val, baseFuel){
   const v=parseFloat(val);
@@ -577,16 +583,18 @@ function applyFuelOverride(num, val, baseFuel){
   else delete fuelOverrides[num];
   renderTable();
   updateBannerAndKpiFuel();
+  saveToFirebase();
 }
 function getRefuel(stintNum, isLast, laps, lpm){
   if(refuelOverrides[stintNum]!==undefined) return refuelOverrides[stintNum];
-  if(isLast) return +(laps * lpm).toFixed(2); // exact fuel for remaining laps
+  if(isLast) return +(laps * lpm).toFixed(2);
   return TANK;
 }
 function resetRefuelOverride(num){
   delete refuelOverrides[num];
   renderTable();
   updateBannerAndKpiFuel();
+  saveToFirebase();
 }
 function applyRefuelOverride(num, val){
   const v=parseFloat(val);
@@ -594,6 +602,7 @@ function applyRefuelOverride(num, val){
   else delete refuelOverrides[num];
   renderTable();
   updateBannerAndKpiFuel();
+  saveToFirebase();
 }
 
 // ── RENDER TABLE ─────────────────────────────────────────────────────────────
@@ -901,11 +910,131 @@ function renderAll(phases, allLapT, allLapN, allLapPhase, totalPitTime){
   `;
 }
 
-// Load Chart.js and auto-simulate
-const s=document.createElement('script');
-s.src='https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js';
-s.onload=()=>simulate();
-document.head.appendChild(s);
+// ── FIREBASE SYNC ────────────────────────────────────────────────────────────
+// Uses Firebase Realtime Database to persist and sync all state in real time.
+// State saved: fuelOverrides, refuelOverrides, driverAssignments, raceStart, phaseConfig
+
+let db = null;         // Firebase database reference
+let isSyncing = false; // prevent echo loops when we write from incoming remote data
+
+const FB_CONFIG = {
+  apiKey: "AIzaSyD-UVJBbsdAB5JaAhDmiJQNOF4zef3ynCc",
+  authDomain: "sebring-strategy.firebaseapp.com",
+  databaseURL: "https://sebring-strategy-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "sebring-strategy",
+  storageBucket: "sebring-strategy.firebasestorage.app",
+  messagingSenderId: "728523623801",
+  appId: "1:728523623801:web:00f2c71d7a15e1a73d73a8"
+};
+
+function saveToFirebase(){
+  if(!db || isSyncing) return;
+  // Gather phase config inputs
+  const phaseConfig = {
+    p1_lap: gv('p1_lap'), p1_dur: gv('p1_dur'), p1_ramp: gv('p1_ramp'), p1_fuel: gv('p1_fuel'),
+    p2_lap: gv('p2_lap'), p2_dur: gv('p2_dur'), p2_ramp: gv('p2_ramp'), p2_fuel: gv('p2_fuel'),
+    p3_lap: gv('p3_lap'), p3_dur: gv('p3_dur'), p3_ramp: gv('p3_ramp'), p3_fuel: gv('p3_fuel'),
+    pit_in1: gv('pit_in1'), pit_out1: gv('pit_out1'),
+    pit_in2: gv('pit_in2'), pit_out2: gv('pit_out2'),
+    race_start_gmt: document.getElementById('race_start_gmt').value,
+  };
+  db.ref('strategy').set({
+    fuelOverrides,
+    refuelOverrides,
+    driverAssignments,
+    phaseConfig,
+    updatedAt: Date.now(),
+  });
+}
+
+function applyRemoteState(data){
+  if(!data) return;
+  isSyncing = true;
+
+  // Apply overrides
+  if(data.fuelOverrides)    fuelOverrides    = data.fuelOverrides;
+  if(data.refuelOverrides)  refuelOverrides  = data.refuelOverrides;
+  if(data.driverAssignments) driverAssignments = data.driverAssignments;
+
+  // Apply phase config to inputs
+  if(data.phaseConfig){
+    const pc = data.phaseConfig;
+    const fields = ['p1_lap','p1_dur','p1_ramp','p1_fuel',
+                    'p2_lap','p2_dur','p2_ramp','p2_fuel',
+                    'p3_lap','p3_dur','p3_ramp','p3_fuel',
+                    'pit_in1','pit_out1','pit_in2','pit_out2'];
+    fields.forEach(f => {
+      const el = document.getElementById(f);
+      if(el && pc[f] !== undefined) el.value = pc[f];
+    });
+    if(pc.race_start_gmt){
+      document.getElementById('race_start_gmt').value = pc.race_start_gmt;
+    }
+  }
+
+  isSyncing = false;
+
+  // Re-simulate with restored phase config, then re-render overrides
+  simulate(true); // true = skip resetting overrides
+}
+
+function showSyncStatus(text, color){
+  let el = document.getElementById('syncStatus');
+  if(!el) return;
+  el.textContent = text;
+  el.style.color = color;
+}
+
+function initFirebase(){
+  firebase.initializeApp(FB_CONFIG);
+  db = firebase.database();
+
+  showSyncStatus('● A ligar...', 'var(--orange)');
+
+  // Listen for remote changes in real time
+  db.ref('strategy').on('value', snapshot => {
+    const data = snapshot.val();
+    if(data && data.updatedAt){
+      showSyncStatus('● Sincronizado ' + new Date(data.updatedAt).toLocaleTimeString('pt-PT'), 'var(--green)');
+      applyRemoteState(data);
+    } else {
+      showSyncStatus('● Sem dados — simula para começar', 'var(--muted)');
+      // No remote data yet, just run default simulation
+      simulate();
+    }
+  }, err => {
+    showSyncStatus('● Erro de ligação', 'var(--red)');
+    console.error('Firebase error:', err);
+    simulate(); // fallback to local
+  });
+
+  // Connection state indicator
+  db.ref('.info/connected').on('value', snap => {
+    if(!snap.val()) showSyncStatus('● Offline', 'var(--red)');
+  });
+}
+
+// Patch all state-mutating functions to auto-save after changes
+const _origResetAll = resetAllFuelOverrides;
+resetAllFuelOverrides = function(){
+  _origResetAll();
+  saveToFirebase();
+};
+
+// Load Chart.js → Firebase compat SDK → init
+function loadScript(src, cb){
+  const el = document.createElement('script');
+  el.src = src; el.onload = cb;
+  document.head.appendChild(el);
+}
+
+loadScript('https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js', () => {
+  loadScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js', () => {
+    loadScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js', () => {
+      initFirebase();
+    });
+  });
+});
 </script>
 </body>
 </html>
